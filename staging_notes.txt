@@ -1,0 +1,42 @@
+Using an intranet raspberry pi as the web server.
+TDD book references to superlists-staging.ottg.edu changed either to just
+superlists-staging (e.g folder/file names), or to the pi's 192.168.x.x address,
+depending on context.
+
+In Ch. 10 of the second edition (online pre-release), versions of some of the
+ files (e.g. the gunicorn .service and the nginx.template.conf) that at that
+ point in time only exist on the pi, with no backup, are being created in the
+off-pi git. As a precaution, these files are being cut and pasted below.
+
+
+/etc/nginx/sites-available/superlists-staging
+
+server {
+    listen 80;
+    server_name 192.168.1.13;
+
+    location /static {
+        alias /home/pi/sites/superlists-staging/static;
+    }
+
+    location / {
+        proxy_set_header Host $host;
+        proxy_pass http://unix:/tmp/superlists-staging.socket;
+    }
+}
+
+
+/etc/systemd/system/gunicorn-superlists-staging.service
+
+[Unit]
+Description=Gunicorn server for superlists-staging
+
+[Service]
+Restart=on-failure
+User=pi
+WorkingDirectory=/home/pi/sites/superlists-staging/source
+ExecStart=/home/pi/sites/superlists-staging/virtualenv/bin/gunicorn \
+    --bind unix:/tmp/superlists-staging.socket superlists.wsgi:application
+
+[Install]
+WantedBy=multi-user.target
